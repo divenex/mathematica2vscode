@@ -84,13 +84,7 @@ Needs["Mathematica2VSCode`"]
 notebookPath = "C:\Path\To\Your\Mathematica\Notebooks\Example.nb";
 
 (* Convert the notebook *)
-convertedFile = Mathematica2VSCode[notebookPath]
-
-(* Check the result *)
-If[convertedFile === $Failed,
-  Print["Conversion failed."],
-  Print["Notebook converted successfully to: ", convertedFile]
-]
+Mathematica2VSCode[notebookPath]
 ```
 
 ## Screenshot
