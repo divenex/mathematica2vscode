@@ -77,7 +77,7 @@ Requires Mathematica 12.0 or newer.
 ## Example
 
 ```wolfram
-(* Assuming mathematica2vscode.wl is in the current working directory or $Path *)
+(* Assuming Mathematica2VSCode.wl is in the current working directory or $Path *)
 Needs["Mathematica2VSCode`"]
 
 (* Specify the path to your Mathematica notebook *)
