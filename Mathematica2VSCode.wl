@@ -29,7 +29,7 @@ processItem[StyleBox[text_String, FontSlant->"Italic", ___]] := " *" <> StringTr
 processItem[StyleBox[text_String, FontWeight->"Bold", ___]] := " **" <> StringTrim[text] <> "** "
 
 processItem[ButtonBox[text_String, ___, ButtonData->{___, URL[url_String], ___}, ___]] := 
-    " [" <> StringTrim[text] <> "](" <> url <> ") "
+    " [" <> text <> "](" <> url <> ") "
         
 processItem[text_String] := text
 
@@ -48,8 +48,8 @@ processContent[data_, type:Except["Input"]] :=
         If[StringQ[data], data, StringJoin[processItem /@ First[data]]], "\n" -> "\r\n\r\n"]
 
 processContent[content_, "Input"] :=
-    StringReplace[ToString[ToExpression[content, StandardForm, HoldForm], InputForm],
-        {"HoldForm[" ~~ Longest[str__] ~~ "]" :> str, ", Null, " -> "\r\n"}]
+    StringReplace[StringReplace[ToString[ToExpression[content, StandardForm, HoldForm], InputForm],
+        "HoldForm[" ~~ Longest[str__] ~~ "]" :> str], ", Null, " -> "\r\n"]
 
 processCell[styleName_String, Cell[cellContent_, ___]] := Switch[styleName,
     "DisplayFormula", <|"kind" -> 1, "languageId" -> "markdown", "value" -> StringReplace[processItem[cellContent], "$" -> "$$"]|>,
