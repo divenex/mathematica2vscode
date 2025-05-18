@@ -95,7 +95,7 @@ If[convertedFile === $Failed,
 
 ## Screenshot
 
-![Image](https://i.sstatic.net/6HQZpO8B.png)
+![Image](https://i.sstatic.net/eSkhZcvI.png)
 
 ## Notes
 
