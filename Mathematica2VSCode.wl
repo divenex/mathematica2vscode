@@ -20,31 +20,31 @@ Mathematica2VSCode::usage = "Mathematica2VSCode[inputFile]
 Begin["`Private`"];
 
 processItem[StyleBox[text_String, "Input", ___]] := 
-    " `" <> StringTrim[text] <> "` "
+    "`" <> StringTrim[text] <> "`"
 
 processItem[StyleBox[text_String, FontColor->RGBColor[r_,g_,b_], ___]] := 
     StringTemplate["<span style=\"color: rgba(`1`,`2`,`3`,1);\">`4`</span>"][
         255*r, 255*g, 255*b, text]
         
-processItem[StyleBox[text_String, FontColor->color_, ___]] := 
+processItem[StyleBox[text_String, FontColor->color_String, ___]] := 
     StringTemplate["<span style=\"color: `1`;\">`2`</span>"][color, text]
 
 processItem[StyleBox[text_String, FontSlant->"Italic", ___]] := 
-    " *" <> StringTrim[text] <> "* "
+    "*" <> StringTrim[text] <> "*"
     
 processItem[StyleBox[text_String, FontWeight->"Bold", ___]] := 
-    " **" <> StringTrim[text] <> "** "
+    "**" <> StringTrim[text] <> "**"
 
 processItem[ButtonBox[text_String, ___, ButtonData->{___, URL[url_String], ___}, ___]] := 
-    " [" <> StringTrim[text] <> "](" <> url <> ") "
+    "[" <> StringTrim[text] <> "](" <> url <> ")"
         
 processItem[text_String] := text
 
 (* Includes a fix for an ExportString bug producing expressions like \(\text{$\sigma$}\) *)
 processItem[Cell[box_BoxData, ___] | box_BoxData] := 
-    StringReplace[StringReplace[ExportString[box, "TeXFragment"], 
-        "\\text{" ~~ Shortest[str__] ~~ "}" /; StringContainsQ[str, "$"] :> 
-            StringDelete[str, "$"]], {"\\(" | "\\)" -> "$", "\r\n" -> ""}]
+    StringReplace[ExportString[box, "TeXFragment"], 
+        {"\\text{" ~~ Shortest[str__] ~~ "}" /; StringContainsQ[str, "$"] :> 
+            StringDelete[str, "$"], "\\(" | "\\)" -> "$", "\r\n" -> ""}]
 
 processItem[other_] := (Print["Unrecognized form:" <> ToString[other]]; "---UNPARSED---")
 
@@ -52,13 +52,11 @@ head = <|"Title" -> "# ", "Section" -> "---\n## ", "Subsection" -> "### ", "Item
 
 processContent[data_, type:Except["Input"]] :=
     Lookup[head, type, ""] <> StringReplace[
-        If[StringQ[data], data, StringJoin[processItem /@ First[data]]], 
-    "\n" -> "\r\n\r\n"]
+        If[StringQ[data], data, StringRiffle[processItem /@ First[data]]], "\n" -> "\r\n\r\n"]
 
 processContent[content_, "Input"] :=
-    StringReplace[StringReplace[
-        ToString[ToExpression[content, StandardForm, HoldForm], InputForm],
-        RegularExpression["^HoldForm\\[(.*)\\]$"] -> "$1"], ", Null, " -> "\r\n"]
+    StringReplace[ToString[ToExpression[content, StandardForm, HoldForm], InputForm],
+        {"HoldForm[" ~~ Longest[str__] ~~ "]" :> str, ", Null, " -> "\r\n"}]
 
 processCell[styleName_String, Cell[cellContent_, ___]] :=
     Switch[styleName,
