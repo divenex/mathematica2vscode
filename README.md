@@ -52,10 +52,10 @@ Requires Mathematica 12.0 or newer.
 ## How to Use
 
 1.  **Load the Package:**
-    Make sure the `mathematica2vscode.wl` file is in a location where Mathematica can find it (e.g., your working directory, a directory in `$Path`, or install it as a package).
+    Make sure the `Mathematica2VSCode.wl` file is in a location where Mathematica can find it (e.g., your working directory, a directory in `$Path`, or install it as a package).
     Then, load the package into your Mathematica session:
     ```wolfram
-    Get["path/to/mathematica2vscode.wl"] 
+    Get["path/to/Mathematica2VSCode.wl"] 
     (* Or if installed/in $Path *)
     Needs["Mathematica2VSCode`"]
     ```
