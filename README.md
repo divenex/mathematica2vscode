@@ -93,6 +93,10 @@ If[convertedFile === $Failed,
 ]
 ```
 
+## Screenshot
+
+![Image](https://i.sstatic.net/6HQZpO8B.png)
+
 ## Notes
 
 *   The conversion process attempts to map Mathematica cell styles (Title, Section, Input, etc.) to appropriate Markdown or code cells in the VSCode Notebook format.
