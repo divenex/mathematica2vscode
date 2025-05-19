@@ -1,4 +1,4 @@
-# Mathematica2VSCode Wolfram Package
+# Mathematica2VSCode: Mathematica Notebooks to VSCode
 
 Converts Mathematica notebooks (.nb) to VSCode Notebook format (.vsnb).
 
@@ -12,7 +12,7 @@ Converts Mathematica notebooks (.nb) to VSCode Notebook format (.vsnb).
 
 ## Summary
 
-This Wolfram Language package provides a function to convert Mathematica notebooks (`.nb` files) into VSCode Notebook files (`.vsnb`). This allows for easier viewing and interaction with Mathematica notebook content within the VSCode environment, leveraging its native notebook interface. This format is used by the [Official Visual Studio Code extension for Wolfram Language](https://marketplace.visualstudio.com/items?itemName=WolframResearch.wolfram) and the unofficial [Wolfram Language Notebook](https://marketplace.visualstudio.com/items?itemName=njpipeorgan.wolfram-language-notebook) extension.
+This `Mathematica2VSCode` Wolfram Language package provides a function to convert Mathematica notebooks (`.nb` files) into VSCode Notebook files (`.vsnb`). This allows for easier viewing and interaction with Mathematica notebook content within the VSCode environment, leveraging its native notebook interface. This format is used by the [Official Visual Studio Code extension for Wolfram Language](https://marketplace.visualstudio.com/items?itemName=WolframResearch.wolfram) and the unofficial [Wolfram Language Notebook](https://marketplace.visualstudio.com/items?itemName=njpipeorgan.wolfram-language-notebook) extension.
 
 The conversion handles various cell types including:
 *   Input cells (Wolfram Language code)
