@@ -24,6 +24,9 @@ processItem[StyleBox[txt_String, "Input", ___]] := " `" <> StringTrim[txt] <> "`
 processItem[StyleBox[txt_String, FontColor->RGBColor[r_,g_,b_], ___]] := 
     StringTemplate["<span style=\"color: rgba(`1`,`2`,`3`,1);\">`4`</span>"][255*r, 255*g, 255*b, txt]
 
+processItem[StyleBox[txt_String, Background->RGBColor[r_,g_,b_], ___]] := 
+    StringTemplate["<span style=\"background-color: rgba(`1`,`2`,`3`,1);\">`4`</span>"][255*r, 255*g, 255*b, txt]
+
 processItem[StyleBox[txt_String, FontSlant->"Italic", ___]] := " *" <> StringTrim[txt] <> "* "
     
 processItem[StyleBox[txt_String, FontWeight->"Bold", ___]] := " **" <> StringTrim[txt] <> "** "
@@ -33,17 +36,21 @@ processItem[ButtonBox[txt_String, ___, ButtonData->{___, URL[url_String], ___}, 
         
 processItem[txt_String] := txt
 
-(* Includes a fix for an ExportString bug producing expressions like \(\text{$\sigma$}\) *)
+processItem[_?(!FreeQ[#, _GraphicsBox]&)] := "---IMAGE---"
+
+(* Includes a fix for an ExportString bug producing expressions like \(\text{2$\sigma$r}\) *)
 processItem[Cell[box_BoxData, ___] | box_BoxData] := 
     StringReplace[ExportString[box, "TeXFragment"], 
-        {"\\text{" ~~ Shortest[str__] ~~ "}" /; StringContainsQ[str, "$"] :> 
+        {"\\text{" ~~ str__ ~~ "}" /; (StringContainsQ[str, "$"] && StringFreeQ[str, {"{", "}"}]) :> 
             StringDelete[str, "$"], "\\(" | "\\)" -> "$", "\r\n" -> ""}]
 
-processItem[other_] := (Print["Unrecognized form:" <> ToString[other]]; "---UNPARSED---")
+processItem[other_] := (Print["Unrecognized form: " <> ToString[other]]; "---UNPARSED---")
 
 processContent[cnt_, type:Except["Input"]] :=
     Switch[type, "Title", "# ", "Section", "---\n## ", "Subsection", "### ", "Item", "- ", _, ""] <> 
-        StringReplace[If[StringQ[cnt], cnt, StringJoin[processItem /@ First[cnt]]], "\n" -> "\r\n\r\n"]
+        StringReplace[If[StringQ[cnt], cnt, StringJoin[processItem /@ Flatten[{First[cnt]}]]], "\n" -> "\r\n\r\n"]
+
+processContent[_?(!FreeQ[#, _GraphicsBox]&), "Input"] := "---IMAGE---"
 
 processContent[cnt_, "Input"] :=
     StringReplace[StringTake[ToString[ToExpression[cnt, StandardForm, HoldComplete], InputForm], {14, -2}], ", Null, " -> "\r\n"]
