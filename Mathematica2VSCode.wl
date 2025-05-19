@@ -21,19 +21,15 @@ Begin["`Private`"];
 
 processItem[StyleBox[txt_String, "Input", ___]] := " `" <> StringTrim[txt] <> "` "
 
-processItem[StyleBox[txt_String, FontColor->RGBColor[r_,g_,b_], ___]] := 
-    StringTemplate["<span style=\"color: rgba(`1`,`2`,`3`,1);\">`4`</span>"][255*r, 255*g, 255*b, txt]
-
-processItem[StyleBox[txt_String, Background->RGBColor[r_,g_,b_], ___]] := 
-    StringTemplate["<span style=\"background-color: rgba(`1`,`2`,`3`,1);\">`4`</span>"][255*r, 255*g, 255*b, txt]
-
 processItem[StyleBox[txt_String, FontSlant->"Italic", ___]] := " *" <> StringTrim[txt] <> "* "
     
 processItem[StyleBox[txt_String, FontWeight->"Bold", ___]] := " **" <> StringTrim[txt] <> "** "
 
+processItem[fmt_StyleBox] := ExportString[fmt, "HTMLFragment"]
+
 processItem[ButtonBox[txt_String, ___, ButtonData->{___, URL[url_String], ___}, ___]] := 
     " [" <> txt <> "](" <> url <> ") "
-        
+
 processItem[txt_String] := txt
 
 processItem[_?(!FreeQ[#, _GraphicsBox]&)] := "---IMAGE---"
