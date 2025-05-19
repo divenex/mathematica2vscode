@@ -19,19 +19,19 @@ Mathematica2VSCode::usage = "Mathematica2VSCode[inputFile]
 
 Begin["`Private`"];
 
-processItem[StyleBox[text_String, "Input", ___]] := " `" <> StringTrim[text] <> "` "
+processItem[StyleBox[txt_String, "Input", ___]] := " `" <> StringTrim[txt] <> "` "
 
-processItem[StyleBox[text_String, FontColor->RGBColor[r_,g_,b_], ___]] := 
-    StringTemplate["<span style=\"color: rgba(`1`,`2`,`3`,1);\">`4`</span>"][255*r, 255*g, 255*b, text]
+processItem[StyleBox[txt_String, FontColor->RGBColor[r_,g_,b_], ___]] := 
+    StringTemplate["<span style=\"color: rgba(`1`,`2`,`3`,1);\">`4`</span>"][255*r, 255*g, 255*b, txt]
 
-processItem[StyleBox[text_String, FontSlant->"Italic", ___]] := " *" <> StringTrim[text] <> "* "
+processItem[StyleBox[txt_String, FontSlant->"Italic", ___]] := " *" <> StringTrim[txt] <> "* "
     
-processItem[StyleBox[text_String, FontWeight->"Bold", ___]] := " **" <> StringTrim[text] <> "** "
+processItem[StyleBox[txt_String, FontWeight->"Bold", ___]] := " **" <> StringTrim[txt] <> "** "
 
-processItem[ButtonBox[text_String, ___, ButtonData->{___, URL[url_String], ___}, ___]] := 
-    " [" <> text <> "](" <> url <> ") "
+processItem[ButtonBox[txt_String, ___, ButtonData->{___, URL[url_String], ___}, ___]] := 
+    " [" <> txt <> "](" <> url <> ") "
         
-processItem[text_String] := text
+processItem[txt_String] := txt
 
 (* Includes a fix for an ExportString bug producing expressions like \(\text{$\sigma$}\) *)
 processItem[Cell[box_BoxData, ___] | box_BoxData] := 
@@ -41,20 +41,17 @@ processItem[Cell[box_BoxData, ___] | box_BoxData] :=
 
 processItem[other_] := (Print["Unrecognized form:" <> ToString[other]]; "---UNPARSED---")
 
-head = <|"Title" -> "# ", "Section" -> "---\n## ", "Subsection" -> "### ", "Item" -> "- "|>
+processContent[cnt_, type:Except["Input"]] :=
+    Lookup[<|"Title" -> "# ", "Section" -> "---\n## ", "Subsection" -> "### ", "Item" -> "- "|>, type, ""] <> 
+        StringReplace[If[StringQ[cnt], cnt, StringJoin[processItem /@ First[cnt]]], "\n" -> "\r\n\r\n"]
 
-processContent[data_, type:Except["Input"]] :=
-    Lookup[head, type, ""] <> StringReplace[
-        If[StringQ[data], data, StringJoin[processItem /@ First[data]]], "\n" -> "\r\n\r\n"]
+processContent[cnt_, "Input"] :=
+    StringReplace[StringTake[ToString[ToExpression[cnt, StandardForm, HoldComplete], InputForm], {14, -2}], ", Null, " -> "\r\n"]
 
-processContent[content_, "Input"] :=
-    StringReplace[StringReplace[ToString[ToExpression[content, StandardForm, HoldForm], InputForm],
-        "HoldForm[" ~~ Longest[str__] ~~ "]" :> str], ", Null, " -> "\r\n"]
-
-processCell[styleName_String, Cell[cellContent_, ___]] := Switch[styleName,
-    "DisplayFormula", <|"kind" -> 1, "languageId" -> "markdown", "value" -> StringReplace[processItem[cellContent], "$" -> "$$"]|>,
-    "Input", <|"kind" -> 2, "languageId" -> "wolfram", "value" -> processContent[cellContent, styleName]|>,
-    _, <|"kind" -> 1, "languageId" -> "markdown", "value" -> processContent[cellContent, styleName]|>]
+processCell[style_String, Cell[cnt_, ___]] := Switch[style,
+    "DisplayFormula", <|"kind" -> 1, "languageId" -> "markdown", "value" -> StringReplace[processItem[cnt], "$" -> "$$"]|>,
+    "Input", <|"kind" -> 2, "languageId" -> "wolfram", "value" -> processContent[cnt, style]|>,
+    _, <|"kind" -> 1, "languageId" -> "markdown", "value" -> processContent[cnt, style]|>]
 
 Mathematica2VSCode[inputFile_String?FileExistsQ] := Module[{cells},
     cells = NotebookImport[inputFile, Except["Output"|"Message"] -> (processCell[#1,#2]&)];    
