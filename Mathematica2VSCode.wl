@@ -42,7 +42,7 @@ processItem[Cell[box_BoxData, ___] | box_BoxData] :=
 processItem[other_] := (Print["Unrecognized form:" <> ToString[other]]; "---UNPARSED---")
 
 processContent[cnt_, type:Except["Input"]] :=
-    Lookup[<|"Title" -> "# ", "Section" -> "---\n## ", "Subsection" -> "### ", "Item" -> "- "|>, type, ""] <> 
+    Switch[type, "Title", "# ", "Section", "---\n## ", "Subsection", "### ", "Item", "- ", _, ""] <> 
         StringReplace[If[StringQ[cnt], cnt, StringJoin[processItem /@ First[cnt]]], "\n" -> "\r\n\r\n"]
 
 processContent[cnt_, "Input"] :=
@@ -56,8 +56,7 @@ processCell[style_String, Cell[cnt_, ___]] := Switch[style,
 Mathematica2VSCode[inputFile_String?FileExistsQ] := Module[{cells},
     cells = NotebookImport[inputFile, Except["Output"|"Message"] -> (processCell[#1,#2]&)];    
     cells = <|#, "value"->ToString[#["value"]]|> & /@ cells;
-    Export[FileBaseName[inputFile] <> ".vsnb", <|"cells"->cells|>, "JSON"]
-]
+    Export[FileBaseName[inputFile] <> ".vsnb", <|"cells"->cells|>, "JSON"]]
 
 End[] 
 
