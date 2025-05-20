@@ -89,7 +89,7 @@ Mathematica2VSCode[notebookPath]
 
 ## Screenshot
 
-![Image](https://i.sstatic.net/eSkhZcvI.png)
+![Image](https://i.sstatic.net/bZbF16KU.png)
 
 ## Notes
 
