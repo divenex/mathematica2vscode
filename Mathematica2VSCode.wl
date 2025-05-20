@@ -32,7 +32,10 @@ processItem[ButtonBox[txt_String, ___, ButtonData->{___, URL[url_String], ___}, 
 
 processItem[txt_String] := txt
 
-processItem[_?(!FreeQ[#, _GraphicsBox]&)] := "---IMAGE---"
+processItem[expr_?(!FreeQ[#, _GraphicsBox]&)] := 
+    ExportString[Image[First[
+        Cases[expr, RasterBox[CompressedData[data__String], ___] :> Uncompress[data], Infinity]
+    ], ColorSpace -> "RGB"], "HTMLFragment"]
 
 (* Includes a fix for an ExportString bug producing expressions like \(\text{2$\sigma$r}\) *)
 processItem[Cell[box_BoxData, ___] | box_BoxData] := 
@@ -53,8 +56,8 @@ processContent[cnt_, "Input"] :=
 
 processCell[style_String, Cell[cnt_, ___]] := Switch[style,
     "DisplayFormula", <|"kind" -> 1, "languageId" -> "markdown", "value" -> StringReplace[processItem[cnt], "$" -> "$$"]|>,
-    "Input", <|"kind" -> 2, "languageId" -> "wolfram", "value" -> processContent[cnt, style]|>,
-    _, <|"kind" -> 1, "languageId" -> "markdown", "value" -> processContent[cnt, style]|>]
+    "Input",          <|"kind" -> 2, "languageId" -> "wolfram",  "value" -> processContent[cnt, style]|>,
+    _,                <|"kind" -> 1, "languageId" -> "markdown", "value" -> processContent[cnt, style]|>]
 
 Mathematica2VSCode[inputFile_String?FileExistsQ] := Module[{cells},
     cells = NotebookImport[inputFile, Except["Output"|"Message"] -> (processCell[#1,#2]&)];    
