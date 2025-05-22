@@ -37,11 +37,11 @@ processItem[expr_?(!FreeQ[#, _RasterBox]&)] :=
         Cases[expr, RasterBox[CompressedData[data__String], ___] :> Uncompress[data], Infinity]
     ], ColorSpace -> "RGB"], "HTMLFragment"]
 
-(* Includes fix for ExportString bug producing TeX like \(\text{2$\sigma$r}\) or \(x{}^2\) *)
+(* Also includes a fix for ExportString bug producing TeX like \(\text{2$\sigma$r}\) or \(x{}^2\) *)
 processItem[Cell[box_BoxData, ___] | box_BoxData] := 
     StringReplace[ExportString[box, "TeXFragment"], 
         {"\\text{" ~~ str__ ~~ "}" /; (StringContainsQ[str, "$"] && StringFreeQ[str, {"{", "}"}]) :> 
-            StringDelete[str, "$"], "\\(" -> " $", "\\)" -> "$ ", "{}^" -> "^", "\r\n" -> " "}]
+            StringDelete[str, "$"], "\\(" -> " $", "\\)" -> "$ ", "{}^" -> "^", "\r\n" -> ""}]
 
 processItem[str_String] := str;
 
@@ -54,7 +54,8 @@ processText[cnt_, type_String] :=
 processInput[_?(!FreeQ[#, _RasterBox]&)] := "---IMAGE---"
 
 processInput[cnt_] := StringReplace[StringTake[
-    ToString[ToExpression[cnt, StandardForm, HoldComplete], InputForm], {14, -2}], ", Null, " -> "\r\n"]
+    ToString[ToExpression[cnt, StandardForm, HoldComplete], InputForm], {14, -2}], 
+        ", Null, " | (", Null" ~~ EndOfString) -> "\r\n"]
 
 processCell[style_String, Cell[cnt_, ___]] := Switch[style,
     "DisplayFormula" | "DisplayFormulaNumbered", 
@@ -62,9 +63,12 @@ processCell[style_String, Cell[cnt_, ___]] := Switch[style,
     "Input" | "Code", <|"kind" -> 2, "languageId" -> "wolfram",  "value" -> processInput[cnt]|>,
     _,                <|"kind" -> 1, "languageId" -> "markdown", "value" -> processText[cnt, style]|>]
 
+mergeMarkdownCells[cells_] := SequenceReplace[cells,
+  {c__?(#["languageId"] === "markdown"&)} :> <|c, "value" -> StringRiffle[Lookup[{c}, "value"], "\r\n\r\n"]|>]
+                                                                          
 Mathematica2VSCode[inputFile_String?FileExistsQ] := Module[{cells},
     cells = NotebookImport[inputFile, Except["Output" | "Message"] -> (processCell[#1,#2]&)];    
-    cells = <|#, "value"->ToString[#["value"]]|> & /@ cells;
+    cells = mergeMarkdownCells[cells];     
     Export[FileBaseName[inputFile] <> ".vsnb", <|"cells"->cells|>, "JSON"]]
 
 End[] 
