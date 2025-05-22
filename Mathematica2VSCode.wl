@@ -19,6 +19,8 @@ Mathematica2VSCode::usage = "Mathematica2VSCode[inputFile]
 
 Begin["`Private`"];
 
+processItem[TextData[elems_]] := StringJoin[processItem /@ Flatten[{elems}]];  (* Recursive *)
+
 processItem[StyleBox[txt_String, "Input", ___]] := " `" <> StringTrim[txt] <> "` "
 
 processItem[StyleBox[txt_String, FontSlant->"Italic", ___]] := " *" <> StringTrim[txt] <> "* "
@@ -30,18 +32,16 @@ processItem[fmt_StyleBox] := ExportString[fmt, "HTMLFragment"]
 processItem[ButtonBox[txt_String, ___, ButtonData->{___, URL[url_String], ___}, ___]] := 
     " [" <> txt <> "](" <> url <> ") "
 
-processItem[expr_?(!FreeQ[#, _GraphicsBox]&)] := 
+processItem[expr_?(!FreeQ[#, _RasterBox]&)] := 
     ExportString[Image[First[
         Cases[expr, RasterBox[CompressedData[data__String], ___] :> Uncompress[data], Infinity]
     ], ColorSpace -> "RGB"], "HTMLFragment"]
 
-(* Includes a fix for an ExportString bug producing expressions like \(\text{2$\sigma$r}\) *)
+(* Includes fix for ExportString bug producing TeX like \(\text{2$\sigma$r}\) or \(x{}^2\) *)
 processItem[Cell[box_BoxData, ___] | box_BoxData] := 
     StringReplace[ExportString[box, "TeXFragment"], 
         {"\\text{" ~~ str__ ~~ "}" /; (StringContainsQ[str, "$"] && StringFreeQ[str, {"{", "}"}]) :> 
             StringDelete[str, "$"], "\\(" -> " $", "\\)" -> "$ ", "{}^" -> "^", "\r\n" -> " "}]
-
-processItem[TextData[elems_]] := StringJoin[processItem /@ Flatten[{elems}]];  (* Recursive *)
 
 processItem[str_String] := str;
 
@@ -51,14 +51,14 @@ processText[cnt_, type_String] :=
     Switch[type, "Title", "# ", "Section", "---\n## ", "Subsection", "### ", "Item", "- ", _, ""] <> 
         StringReplace[processItem[cnt], "\n" -> "\r\n\r\n"]
 
-processInput[_?(!FreeQ[#, _GraphicsBox]&)] := "---IMAGE---"
+processInput[_?(!FreeQ[#, _RasterBox]&)] := "---IMAGE---"
 
 processInput[cnt_] := StringReplace[StringTake[
     ToString[ToExpression[cnt, StandardForm, HoldComplete], InputForm], {14, -2}], ", Null, " -> "\r\n"]
 
 processCell[style_String, Cell[cnt_, ___]] := Switch[style,
     "DisplayFormula" | "DisplayFormulaNumbered", 
-                      <|"kind" -> 1, "languageId" -> "markdown", "value" -> StringReplace[processText[cnt, style], "$" -> "$$"]|>,
+                      <|"kind" -> 1, "languageId" -> "markdown", "value" -> StringReplace[processItem[cnt], "$" -> "$$"]|>,
     "Input" | "Code", <|"kind" -> 2, "languageId" -> "wolfram",  "value" -> processInput[cnt]|>,
     _,                <|"kind" -> 1, "languageId" -> "markdown", "value" -> processText[cnt, style]|>]
 
