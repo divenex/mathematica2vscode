@@ -54,23 +54,23 @@ processText[cnt_, type_String] :=
 processInput[_?(!FreeQ[#, _RasterBox]&)] := "---IMAGE---"
 
 processInput[cnt_] := StringReplace[StringTake[
-    ToString[ToExpression[cnt, StandardForm, HoldComplete], InputForm], {14, -2}], 
-        ", Null, " | (", Null" ~~ EndOfString) -> "\r\n"]
+    ToString[ToExpression[cnt, StandardForm, HoldComplete], InputForm], 
+        {14, -2}], ", Null, " | (", Null" ~~ EndOfString) -> "\r\n"]
 
-processCell[style_String, Cell[cnt_, ___]] := Switch[style,
-    "DisplayFormula" | "DisplayFormulaNumbered", 
-                      <|"kind" -> 1, "languageId" -> "markdown", "value" -> StringReplace[processItem[cnt], "$" -> "$$"]|>,
-    "Input" | "Code", <|"kind" -> 2, "languageId" -> "wolfram",  "value" -> processInput[cnt]|>,
-    _,                <|"kind" -> 1, "languageId" -> "markdown", "value" -> processText[cnt, style]|>]
+processCell[style_, Cell[cnt_, ___]] :=
+    AssociationThread[{"kind", "languageId", "value"} -> Switch[style,
+        "DisplayFormula" | "DisplayFormulaNumbered", 
+                          {1, "markdown", StringReplace[processItem[cnt], "$" -> "$$"]},
+        "Input" | "Code", {2, "wolfram",  processInput[cnt]},
+        _,                {1, "markdown", processText[cnt, style]}]]
 
-mergeMarkdownCells[cells_] := SequenceReplace[cells,
-  {c__?(#["languageId"] === "markdown"&)} :> <|c, "value" -> StringRiffle[Lookup[{c}, "value"], "\r\n\r\n"]|>]
+mergeMarkdownCells[cells_] := SequenceReplace[cells,{c__?(#["languageId"] === "markdown"&)} :> 
+    <|c, "value" -> StringRiffle[Lookup[{c}, "value"], "\r\n\r\n"]|>]
                                                                           
-Mathematica2VSCode[inputFile_String?FileExistsQ] := Module[{cells},
-    cells = NotebookImport[inputFile, Except["Output" | "Message"] -> (processCell[#1,#2]&)];    
-    cells = mergeMarkdownCells[cells];     
-    Export[FileBaseName[inputFile] <> ".vsnb", <|"cells"->cells|>, "JSON"]]
+Mathematica2VSCode[inputFile_?FileExistsQ] := Export[FileBaseName[inputFile] <> ".vsnb", 
+    <|"cells" -> mergeMarkdownCells@NotebookImport[inputFile, 
+        Except["Output" | "Message"] -> (processCell[#1,#2]&)]|>, "JSON"]
 
-End[] 
+End[]
 
 EndPackage[]
