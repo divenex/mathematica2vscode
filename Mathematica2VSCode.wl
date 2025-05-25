@@ -19,6 +19,23 @@ Mathematica2VSCode::usage = "Mathematica2VSCode[inputFile]
 
 Begin["`Private`"];
 
+prefix = <|"Title"               -> "# ",
+           "Section"             -> "---\n## ",
+           "Subsection"          -> "### ",
+           "Subsubsection"       -> "#### ",
+           "Subsubsubsection"    -> "##### ",
+           "Chapter"             -> "# ", 
+           "Subchapter"          -> "## ", 
+           "Item"                -> "-   ",
+           "ItemNumbered"        -> "1.  ",
+           "ItemParagraph"       -> "    ",    
+           "Subitem"             -> "    -   ", 
+           "SubitemNumbered"     -> "    1.  ",
+           "SubitemParagraph"    -> "        ",    
+           "Subsubitem"          -> "        -   ", 
+           "SubsubitemNumbered"  -> "        1.  ",
+           "SubsubitemParagraph" -> "            "|>
+
 processItem[TextData[elems_]] := StringJoin[processItem /@ Flatten[{elems}]];  (* Recursive *)
 
 processItem[StyleBox[txt_String, "Input", ___]] := " `" <> StringTrim[txt] <> "` "
@@ -47,16 +64,17 @@ processItem[str_String] := str;
 
 processItem[unknown_] := (Print["Unrecognized form: " <> ToString[unknown]]; "---UNPARSED---")
 
-processText[cnt_, type_String] :=
-    Switch[type, "Title", "# ", "Section", "---\n## ", "Subsection", "### ", "Item", "- ", _, ""] <> 
-        StringReplace[processItem[cnt], "\n" -> "\r\n\r\n"]
+processText[cnt_, type_] := Lookup[prefix, type, ""] <> StringReplace[processItem[cnt], "\n" -> "\n\n"]
 
 processInput[_?(!FreeQ[#, _RasterBox]&)] := "---IMAGE---"
 
 processInput[cnt_] := StringReplace[StringTake[
     ToString[ToExpression[cnt, StandardForm, HoldComplete], InputForm], 
-        {14, -2}], ", Null, " | (", Null" ~~ EndOfString) -> "\r\n"]
+        {14, -2}], ", Null, " | (", Null" ~~ EndOfString) -> "\n"]
 
+mergeMarkdownCells[cells_] := SequenceReplace[cells,{c__?(#["languageId"] === "markdown"&)} :> 
+    <|c, "value" -> StringRiffle[Lookup[{c}, "value"], "\n\n"]|>]
+                                                                          
 processCell[style_, Cell[cnt_, ___]] :=
     AssociationThread[{"kind", "languageId", "value"} -> Switch[style,
         "DisplayFormula" | "DisplayFormulaNumbered", 
@@ -64,9 +82,6 @@ processCell[style_, Cell[cnt_, ___]] :=
         "Input" | "Code", {2, "wolfram",  processInput[cnt]},
         _,                {1, "markdown", processText[cnt, style]}]]
 
-mergeMarkdownCells[cells_] := SequenceReplace[cells,{c__?(#["languageId"] === "markdown"&)} :> 
-    <|c, "value" -> StringRiffle[Lookup[{c}, "value"], "\r\n\r\n"]|>]
-                                                                          
 Mathematica2VSCode[inputFile_?FileExistsQ] := Export[FileBaseName[inputFile] <> ".vsnb", 
     <|"cells" -> mergeMarkdownCells@NotebookImport[inputFile, 
         Except["Output" | "Message"] -> (processCell[#1,#2]&)]|>, "JSON"]
