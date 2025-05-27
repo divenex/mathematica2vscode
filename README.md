@@ -1,6 +1,6 @@
 # Mathematica2VSCode: Mathematica Notebooks to VSCode
 
-Converts Mathematica notebooks (.nb) to Visual Studio Code (VSCode) Notebook format (.vsnb).
+Converts Mathematica notebooks (.nb) to Visual Studio Code (VSCode) Notebook format (.vsnb or .wlnb).
 
 ## Author
 
