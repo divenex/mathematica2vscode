@@ -8,24 +8,23 @@
 (* :Mathematica Version: 12.0+ *)
 (* :Copyright: (c) 2025 divenex (https://github.com/divenex) *)
 
-ClearAll["Mathematica2VSCode`*", "Mathematica2VSCode`Private`*"]  (* Clean everything upon reloading *)
-
 BeginPackage["Mathematica2VSCode`"];
 
 Mathematica2VSCode::usage = "Mathematica2VSCode[inputFile] 
     converts a Mathematica notebook (.nb) specified by inputFile to VSCode Notebook (.vsnb) format.
     The output file is saved to the same location as the input file but with .vsnb extension.
-    Returns the path to the created .vsnb file upon success, or $Failed if conversion fails.";
+    Returns the path to the created .vsnb file upon success, or $Failed if conversion fails."
 
 Begin["`Private`"];
 
+Mathematica2VSCode::unparsed = "Unrecognized form encountered during conversion: `1`";
+
 prefix = <|"Title"               -> "# ",
+           "Subtitle"            -> "### ",
+           "Chapter"             -> "# ", 
            "Section"             -> "---\n## ",
            "Subsection"          -> "### ",
            "Subsubsection"       -> "#### ",
-           "Subsubsubsection"    -> "##### ",
-           "Chapter"             -> "# ", 
-           "Subchapter"          -> "## ", 
            "Item"                -> "-   ",
            "ItemNumbered"        -> "1.  ",
            "ItemParagraph"       -> "    ",    
@@ -54,15 +53,18 @@ processItem[expr_?(!FreeQ[#, _RasterBox]&)] :=
         Cases[expr, RasterBox[CompressedData[data__String], ___] :> Uncompress[data], Infinity]
     ], ColorSpace -> "RGB"], "HTMLFragment"]
 
-(* Also includes a fix for ExportString bug producing TeX like \(\text{2$\sigma$r}\) or \(x{}^2\) *)
+cond = (StringContainsQ[#, "$"] && StringFreeQ[#, {"{", "}"}])&
+
+(* Also includes a fix for ExportString bugs producing TeX like \(\text{\textit{2$\sigma$r}}\) or \(x{}^2\) *)
 processItem[Cell[box_BoxData, ___] | box_BoxData] := 
     StringReplace[ExportString[box, "TeXFragment"], 
-        {"\\text{" ~~ str__ ~~ "}" /; (StringContainsQ[str, "$"] && StringFreeQ[str, {"{", "}"}]) :> 
-            StringDelete[str, "$"], "\\(" -> " $", "\\)" -> "$ ", "{}^" -> "^", "\r\n" -> ""}]
+        { "\\text{\\textit{" ~~ str__ ~~ "}}" /; cond[str] :> StringDelete[str, "$"],
+         ("\\text{" | "\\textit{") ~~ str__ ~~ "}" /; cond[str] :> StringDelete[str, "$"],
+          "\\(" -> " $", "\\)" -> "$ ", "{}" | "\r\n" -> ""}]
 
-processItem[str_String] := str;
+processItem[str_String] := str
 
-processItem[unknown_] := (Print["Unrecognized form: " <> ToString[unknown]]; "---UNPARSED---")
+processItem[unknown_] := (Message[Mathematica2VSCode::unparsed, unknown]; "---UNPARSED---")
 
 processText[cnt_, type_] := Lookup[prefix, type, ""] <> StringReplace[processItem[cnt], "\n" -> "\n\n"]
 
@@ -72,9 +74,6 @@ processInput[cnt_] := StringReplace[StringTake[
     ToString[ToExpression[cnt, StandardForm, HoldComplete], InputForm], 
         {14, -2}], ", Null, " | (", Null" ~~ EndOfString) -> "\n"]
 
-mergeMarkdownCells[cells_] := SequenceReplace[cells,{c__?(#["languageId"] === "markdown"&)} :> 
-    <|c, "value" -> StringRiffle[Lookup[{c}, "value"], "\n\n"]|>]
-                                                                          
 processCell[style_, Cell[cnt_, ___]] :=
     AssociationThread[{"kind", "languageId", "value"} -> Switch[style,
         "DisplayFormula" | "DisplayFormulaNumbered", 
@@ -82,9 +81,12 @@ processCell[style_, Cell[cnt_, ___]] :=
         "Input" | "Code", {2, "wolfram",  processInput[cnt]},
         _,                {1, "markdown", processText[cnt, style]}]]
 
+mergeMarkdownCells[cells_] := SequenceReplace[cells,{c__?(#["languageId"] === "markdown"&)} :> 
+    <|c, "value" -> StringRiffle[Lookup[{c}, "value"], "\n\n"]|>]
+                                                                          
 Mathematica2VSCode[inputFile_?FileExistsQ] := Export[FileBaseName[inputFile] <> ".vsnb", 
-    <|"cells" -> mergeMarkdownCells@NotebookImport[inputFile, 
-        Except["Output" | "Message"] -> (processCell[#1,#2]&)]|>, "JSON"]
+    {"cells" -> mergeMarkdownCells@NotebookImport[inputFile, 
+        Except["Output" | "Message"] -> (processCell[#1,#2]&)]}, "JSON"]
 
 End[]
 
